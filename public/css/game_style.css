@@ -1,0 +1,86 @@
+#info, #p_name, #p_fps, #p_time, #p_coords, #p_spd {
+	position: absolute;
+	width: 100%;
+	z-index: 100;
+	display:block;
+	color:red;
+	font-weight: bold;
+	font-size:32px;
+	font-family:verdana;
+}
+
+#info {
+	top: 1%;
+	text-align: center;
+}
+
+#p_fps {
+	top: 2%;
+}
+
+#p_time {
+	top: 7%;
+}
+
+#p_coords {
+	top: 12%;
+}
+
+#p_spd {
+	top: 17%;
+}
+
+#p_name {
+	top: 22%;
+}
+
+#button1{
+	position: absolute; 
+	left: 0; 
+	right: 0; 
+	margin-inline: auto; 
+	width: fit-content;
+	bottom: 7%;
+	
+	background-color: white;
+	padding: 1.2% 2.5%;
+	text-align: center;
+	
+	border: solid;
+	border-width: 6px;
+	border-color: #5acbff;
+	
+	font-family: Impact;
+	color: black;
+	font-size: 28px;
+	cursor: pointer;
+	border-radius: 4px;
+}
+
+.btn_back {
+	position: absolute;
+	bottom: 5%;
+	left: 5%;
+	
+	background-color: white;
+	padding: 1.2% 2.5%;
+	text-align: center;
+	text-decoration: none;
+	display: inline-block;
+	width: 8%;
+	
+	border: solid;
+	border-width: 6px;
+	border-color: #5acbff;
+	
+	font-family: Impact;
+	color: black;
+	font-size: 28px;
+	cursor: pointer;
+	border-radius: 4px;
+}
+
+#button1:hover, .btn_back:hover {
+	transform: scale(1.2) perspective(1px);
+	
+}
