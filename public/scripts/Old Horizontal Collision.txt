@@ -1,0 +1,16 @@
+/*const leftEdge = new THREE.Vector3(player1.fn_getWallCollision().x - player1.fn_getWallCollisionRadius(), player1.fn_getWallCollision().y, player1.fn_getWallCollision().z);
+					const rightEdge = new THREE.Vector3(player1.fn_getWallCollision().x + player1.fn_getWallCollisionRadius(), player1.fn_getWallCollision().y, player1.fn_getWallCollision().z);
+					
+					raycaster_walls.set(leftEdge, direction_horizontal);
+					intersectsLeft = raycaster_walls.intersectObject(courseModel, true);
+					
+					raycaster_walls.set(rightEdge, direction_horizontal.negate());
+					intersectsRight = raycaster_walls.intersectObject(courseModel, true);
+					
+					if (intersectsLeft.length > 0 && intersectsRight.length > 0) {
+						let depthX = intersectsLeft.length > 0 ? intersectsLeft[0].distance : null;
+						let depthZ = intersectsRight.length > 0 ? intersectsRight[0].distance : null;
+						
+						console.log("Horizontal Collision! depthX = " + depthX + ", depthZ = " + depthZ);
+						//player1.fn_hitWall(depthX);
+					}*/
