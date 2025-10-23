@@ -2,6 +2,7 @@
 export default class InputHandler{
 	
 	constructor(){
+		this.printKey = false;
 		this.lastkey = [null, null];
 		
 		this.char_kb_forward = "w";
@@ -9,7 +10,7 @@ export default class InputHandler{
 		this.char_kb_left = "a";
 		this.char_kb_right = "d";
 		this.char_kb_accelerate = " ";
-		//this.char_kb_brake = 16;
+		this.char_kb_brake = "Shift";
 		this.char_kb_drift = "j";
 		this.char_kb_item = "k";
 		this.char_kb_rear = "l";
@@ -23,7 +24,7 @@ export default class InputHandler{
 		this.b_kb_left = false;
 		this.b_kb_right = false;
 		this.b_kb_accelerate = false;
-		//this.b_kb_brake = false;
+		this.b_kb_brake = false;
 		this.b_kb_drift = false;
 		this.b_kb_item = false;
 		this.b_kb_rear = false;
@@ -54,9 +55,9 @@ export default class InputHandler{
 					this.lastkey[1] = "PRESS " + this.char_kb_accelerate;
 					this.b_kb_accelerate = true;
 					break;
-				/*case event.keyCode === this.char_kb_break:
-					this.lastkey[1] = "PRESS " + this.char_kb_break;
-					break;*/
+				case this.char_kb_brake:
+					this.lastkey[1] = "PRESS " + this.char_kb_brake;
+					break;
 				case this.char_kb_drift:
 					this.lastkey[1] = "PRESS " + this.char_kb_drift;
 					this.b_kb_drift = true;
@@ -88,8 +89,9 @@ export default class InputHandler{
 				default:
 					break;
 			}
-			
-			console.log(this.lastkey);
+			if(this.printKey){
+				console.log(this.lastkey);
+			}
 			if(this.lastkey[0] != this.lastkey[1]){
 				//console.log("pressed");
 			}
@@ -118,9 +120,9 @@ export default class InputHandler{
 					this.lastkey[1] = "RELEASE " + this.char_kb_accelerate;
 					this.b_kb_accelerate = false;
 					break;
-				/*case event.keyCode === this.char_kb_break:
-					this.lastkey[1] = "RELEASE " + this.char_kb_break;
-					break;*/
+				case this.char_kb_brake:
+					this.lastkey[1] = "RELEASE " + this.char_kb_brake;
+					break;
 				case this.char_kb_drift:
 					this.lastkey[1] = "RELEASE " + this.char_kb_drift;
 					this.b_kb_drift = false;
@@ -152,8 +154,9 @@ export default class InputHandler{
 				default:
 					break;
 			}
-			
-			console.log(this.lastkey);
+			if(this.printKey){
+				console.log(this.lastkey);
+			}
 		});
 	}
 	
@@ -207,6 +210,16 @@ export default class InputHandler{
 	//Function for accelerate input:
 	fn_hold_accelerate(){
 		if(this.b_kb_accelerate){
+			return true;
+		}
+		else{
+			return false;
+		}
+	}
+
+	//Function for brake input:
+	fn_hold_brake(){
+		if(this.b_kb_brake){
 			return true;
 		}
 		else{

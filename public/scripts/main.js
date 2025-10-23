@@ -1,8 +1,23 @@
-//Last uploaded:		4/8/25		3:25 PM		0.0.5 (Better Collision and Offroad)
-//Current version:		0.0.6 (Laps & Better Steering)
+//Last uploaded:		6/8/25		5:44 PM		0.0.7 (Laps & Checkpoints)
+//Current version:		0.0.8 (CSS & Nuanced Turning)
 //Features added since last version: 
-//	- Collision with pipes (need to change later).
-//	- Changed order of collision capsule.
+//	- Made the CSS elements and viewport size more responsive/dynamic.
+//	- Made it so the scrollbar doesn't show up when fullscreen.
+//	- Fixed the pixel ratio for 4K displays.
+//	- Added item box and item box row objects.
+//	- Timer now pauses when player finsihes all laps.
+//	- Pause button now pauses timer.
+//	- Game now recognises Shift as an input.
+//	- Added onstant variables to player.js.
+//	- Checkpoint & object locations scale with map scale.
+//	- More nuanced turning (slow down, then back up in a U-curve).
+//	- Standstill drifting.
+//	- Airtime reduces speed (not counting jumping).
+//	- Sliding while drifting (based on the player's current speed).
+
+//Bugs to fix:
+// 	- Not handling multiple inputs well while drifting. 
+//	- Progress when going backwards in a track.
 
 //COMMAND: npx vite
 
@@ -11,26 +26,32 @@
 	import WebGL from 'three/addons/capabilities/WebGL.js';
 	import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 	
-	import Stats from 'three/addons/libs/stats.module.js';
 	import { Octree } from 'three/addons/math/Octree.js';
 	import { OctreeHelper } from 'three/addons/helpers/OctreeHelper.js';
 	
-	import { Capsule } from 'three/addons/math/Capsule.js';
-	import { GUI } from 'three/addons/libs/lil-gui.module.min.js';
 //Class imports:
 	import gameLoop from "./GameLoop.js";
 	import InputHandler from "./input.js";
 	import Player from "./player.js";
-	import Cube from "./objects/cube.js";
-	import Pipe from "./objects/pipe.js";
+	//Objects:
+		import Checkpoint from "./objects/checkpoint.js";
+		import Pipe from "./objects/pipe.js";
+		import ItemBox from "./objects/itemBox.js";
+		import ItemBoxRow from "./objects/itemBoxRow.js";
 
 //Variable initializations:
+	const a_objects = [];
+	const a_checkpoints = [];
+	
 	const worldOctree = new Octree();		//Collision detector initialization.
 	const offroadOctree = new Octree();		//Offroad detector initialization.
 	
-	var str_map = "N64 Mario Raceway";
+	var str_map = "SNES MC1";
 	var f_mapScale = 1;
 	var v_mapPos = new THREE.Vector3(0, 60, 0);
+	var b_updateHUD = true;
+	
+	let int_numKeys;
 	
 //Displaying username:
 	//Do AJAX call to get name from getName.php, and append it to p_name.
@@ -41,7 +62,7 @@
 	request.send(null);
 	
 	function fn_displayName(){
-		if(request.readyState == 4){	//4 makes sure that data has been gotten back.
+		if(b_updateHUD && request.readyState == 4){	//4 makes sure that data has been gotten back.
 			
 			var nameButton = document.getElementById("p_name");
 			nameButton.innerHTML = "Logged in as " + request.responseText;
@@ -59,15 +80,16 @@
 		v_mapPos = new THREE.Vector3(245,260,6);
 	}
 	else if(str_map == "N64 Mario Raceway"){
-		f_mapScale = .6;
-		v_mapPos = new THREE.Vector3(-175, 35, -35);
+		f_mapScale = .75;
+		v_mapPos = new THREE.Vector3(-220, 35, -35);
 	}
 	else if(str_map == "N64 Block Fort"){
-		f_mapScale = 1.05;
+		f_mapScale = 1.25;
 		v_mapPos = new THREE.Vector3(0, 60, 0);
 	}
 	else if(str_map == "SNES MC1"){
-		v_mapPos = new THREE.Vector3(32, 20, 50);
+		f_mapScale = 1.2;
+		v_mapPos = new THREE.Vector3(40, 20, 25);
 	}
 	else if(str_map == "Wii Toad's Factory"){
 		v_mapPos = new THREE.Vector3(-272, 40, -181);
@@ -91,19 +113,104 @@
 //Initializing the scene:
 	//3 things needed for anything: scene, camera, & renderer.
 	const scene = new THREE.Scene();
-	const camera = new THREE.PerspectiveCamera( 45, window.innerWidth / window.innerHeight, 1, 1000 );	
+	const camera = new THREE.PerspectiveCamera( 50, window.innerWidth / window.innerHeight, 1, 1000 );	
 	//1 of many types of cameras in JS.		  (FOV, aspect ratio, near (objs closer than near, or farther than far won't be rendered), far) 
-	camera.position.set( 0, 0, 0 );
+	//camera.position.set( 0, 0, 0 );
 	//camera.lookAt( 0, 10, 0 );
 	//scene.fog = new THREE.Fog( 0x88ccee, 0, 50 );
 
 	//Renderer initialization:
-	const renderer = new THREE.WebGLRenderer({alpha: true});
-	renderer.setSize( window.innerWidth, window.innerHeight );
+	const renderer = new THREE.WebGLRenderer({
+		antialias: true,
+		alpha: true
+	});
+	renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));	//Sets ratio of CSS pixels to actual pixels. 1 is for 1080p screens, 2 is for 4K, 3 is for smartphone.
+	renderer.setSize( window.innerWidth, window.innerHeight * .999);
 	document.body.appendChild( renderer.domElement );
+
+	//Renderer resize handler:
+	window.addEventListener('resize', () => {
+		//Update camera:
+		camera.aspect = window.innerWidth / window.innerHeight;
+		camera.updateProjectionMatrix();							//Tells three.js to update the camera.
+
+		//Update renderer:
+		renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));	//Order matters. Set ratio, then size.
+		renderer.setSize(window.innerWidth, window.innerHeight * .999);
+
+	}, false);
+
 	//Render background:
 	if(str_map == "SNES MC1"){
 		renderer.setClearColor( 0xe8f870, 1);
+		//Adding Checkpoints:
+			a_checkpoints.push(new Checkpoint(scene, [30, 14, 7], 1, [.2, 16, 40], 1.5708, true, 0));
+			a_checkpoints[0].fn_setGoal();
+			a_checkpoints[0].fn_setNextKey(11);
+			
+			a_checkpoints.push(new Checkpoint(scene, [10, 14, -36], f_mapScale, [.2, 16, 70], 0, false, 1));
+			a_checkpoints.push(new Checkpoint(scene, [4, 14, -40], f_mapScale, [.2, 16, 70], 0, false, 2));
+			a_checkpoints.push(new Checkpoint(scene, [-2, 14, -46], f_mapScale, [.2, 16, 70], 0, false, 3));
+			a_checkpoints.push(new Checkpoint(scene, [-8, 14, -50], f_mapScale, [.2, 16, 80], 0, false, 4));
+			a_checkpoints.push(new Checkpoint(scene, [-15, 14, -55], f_mapScale, [.2, 16, 70], 0, false, 5));
+			a_checkpoints.push(new Checkpoint(scene, [-20, 14, -55], f_mapScale, [.2, 16, 70], 0, false, 6));
+			a_checkpoints.push(new Checkpoint(scene, [-30, 14, -55], f_mapScale, [.2, 16, 70], 0, false, 7));
+			a_checkpoints.push(new Checkpoint(scene, [-40, 14, -55], f_mapScale, [.2, 16, 70], 0, false, 8));
+			a_checkpoints.push(new Checkpoint(scene, [-50, 14, -55], f_mapScale, [.2, 16, 70], 0, false, 9));
+			a_checkpoints.push(new Checkpoint(scene, [-60, 14, -55], f_mapScale, [.2, 16, 70], 0, false, 10));
+			a_checkpoints.push(new Checkpoint(scene, [-70, 14, -55], f_mapScale, [.2, 16, 70], 0, true, 11));
+			a_checkpoints[11].fn_setNextKey(24);
+			a_checkpoints.push(new Checkpoint(scene, [-80, 14, -55], f_mapScale, [.2, 16, 70], 0, false, 12));
+			a_checkpoints.push(new Checkpoint(scene, [-90, 14, -55], f_mapScale, [.2, 16, 70], 0, false, 13));
+			a_checkpoints.push(new Checkpoint(scene, [-100, 14, -65], f_mapScale, [.2, 16, 50], 0, false, 14));
+			a_checkpoints.push(new Checkpoint(scene, [-110, 14, -65], f_mapScale, [.2, 16, 50], 0, false, 15));
+			a_checkpoints.push(new Checkpoint(scene, [-116, 14, -65], f_mapScale, [.2, 16, 50], 0, false, 16));
+			a_checkpoints.push(new Checkpoint(scene, [-122, 14, -75], f_mapScale, [.2, 16, 35], 0, false, 17));
+			
+			a_checkpoints.push(new Checkpoint(scene, [-137, 14, -67], f_mapScale, [.2, 16, 30], 1.5708, false, 18));
+			a_checkpoints.push(new Checkpoint(scene, [-133, 14, -57], f_mapScale, [.2, 16, 35], 1.5708, false, 19));
+			a_checkpoints.push(new Checkpoint(scene, [-130, 14, -48], f_mapScale, [.2, 16, 40], 1.5708, false, 20));
+			a_checkpoints.push(new Checkpoint(scene, [-130, 14, -40], f_mapScale, [.2, 16, 40], 1.5708, false, 21));
+			a_checkpoints.push(new Checkpoint(scene, [-130, 14, -30], f_mapScale, [.2, 16, 40], 1.5708, false, 22));
+			a_checkpoints.push(new Checkpoint(scene, [-130, 14, -20], f_mapScale, [.2, 16, 40], 1.5708, false, 23));
+			a_checkpoints.push(new Checkpoint(scene, [-130, 14, -10], f_mapScale, [.2, 16, 40], 1.5708, true, 24));
+			a_checkpoints[24].fn_setNextKey(37);
+			a_checkpoints.push(new Checkpoint(scene, [-130, 14, 0], f_mapScale, [.2, 16, 40], 1.5708, false, 25));
+			a_checkpoints.push(new Checkpoint(scene, [-130, 14, 10], f_mapScale, [.2, 16, 40], 1.5708, false, 26));
+			a_checkpoints.push(new Checkpoint(scene, [-130, 14, 20], f_mapScale, [.2, 16, 40], 1.5708, false, 27));
+			a_checkpoints.push(new Checkpoint(scene, [-135, 14, 30], f_mapScale, [.2, 16, 33], 1.5708, false, 28));
+			a_checkpoints.push(new Checkpoint(scene, [-135, 14, 40], f_mapScale, [.2, 16, 33], 1.5708, false, 29));
+			
+			
+			a_checkpoints.push(new Checkpoint(scene, [-118, 14, 45], f_mapScale, [.2, 16, 50], 0, false, 30));
+			a_checkpoints.push(new Checkpoint(scene, [-109, 14, 35], f_mapScale, [.2, 16, 70], 0, false, 31));
+			a_checkpoints.push(new Checkpoint(scene, [-100, 14, 32], f_mapScale, [.2, 16, 72], 0, false, 32));
+			a_checkpoints.push(new Checkpoint(scene, [-90, 14, 32], f_mapScale, [.2, 16, 72], 0, false, 33));
+			a_checkpoints.push(new Checkpoint(scene, [-80, 14, 32], f_mapScale, [.2, 16, 72], 0, false, 34));
+			a_checkpoints.push(new Checkpoint(scene, [-70, 14, 32], f_mapScale, [.2, 16, 72], 0, false, 35));
+			a_checkpoints.push(new Checkpoint(scene, [-60, 14, 32], f_mapScale, [.2, 16, 72], 0, false, 36));
+			a_checkpoints.push(new Checkpoint(scene, [-50, 14, 42], f_mapScale, [.2, 16, 95], 0, true, 37));
+			a_checkpoints[37].fn_setNextKey(0);
+			a_checkpoints.push(new Checkpoint(scene, [-40, 14, 42], f_mapScale, [.2, 16, 95], 0, false, 38));
+			a_checkpoints.push(new Checkpoint(scene, [-30, 14, 42], f_mapScale, [.2, 16, 95], 0, false, 39));
+			a_checkpoints.push(new Checkpoint(scene, [-20, 14, 42], f_mapScale, [.2, 16, 95], 0, false, 40));
+			a_checkpoints.push(new Checkpoint(scene, [-10, 14, 42], f_mapScale, [.2, 16, 95], 0, false, 41));
+			a_checkpoints.push(new Checkpoint(scene, [0, 14, 42], f_mapScale, [.2, 16, 95], 0, false, 42));
+			a_checkpoints.push(new Checkpoint(scene, [10, 14, 42], f_mapScale, [.2, 16, 95], 0, false, 43));
+			
+			
+			
+			a_checkpoints.push(new Checkpoint(scene, [30, 14, 50], f_mapScale, [.2, 16, 40], 1.5708, false, 47));
+			a_checkpoints.push(new Checkpoint(scene, [30, 14, 45], f_mapScale, [.2, 16, 40], 1.5708, false, 48));
+			a_checkpoints.push(new Checkpoint(scene, [30, 14, 40], f_mapScale, [.2, 16, 40], 1.5708, false, 49));
+			a_checkpoints.push(new Checkpoint(scene, [30, 14, 35], f_mapScale, [.2, 16, 40], 1.5708, false, 50));
+			a_checkpoints.push(new Checkpoint(scene, [30, 14, 30], f_mapScale, [.2, 16, 40], 1.5708, false, 51));
+			a_checkpoints.push(new Checkpoint(scene, [30, 14, 25], f_mapScale, [.2, 16, 40], 1.5708, false, 52));
+			a_checkpoints.push(new Checkpoint(scene, [30, 14, 20], f_mapScale, [.2, 16, 40], 1.5708, false, 53));
+			a_checkpoints.push(new Checkpoint(scene, [30, 14, 15], f_mapScale, [.2, 16, 40], 1.5708, false, 54));
+			a_checkpoints.push(new Checkpoint(scene, [30, 14, 10], f_mapScale, [.2, 16, 40], 1.5708, false, 55));
+			
+			int_numKeys = 4;
 	}
 	else{
 		renderer.setClearColor( 0x74bcff, 1);
@@ -165,41 +272,28 @@
 	);
 		
 	//Adding cubes:
-		const arr_objects = [];
-		arr_objects.push(new Cube(scene, -55, 7.2, -60, 1));		//Cube #0
-		arr_objects.push(new Cube(scene, -54, 7.2, -55.5, 1));	//Cube #1
-		arr_objects.push(new Cube(scene, -54.5, 7.2, -52, 1));	//Cube #2
-		arr_objects.push(new Cube(scene, -52, 7.2, -58, 1));		//Cube #3
-		arr_objects.push(new Cube(scene, -51, 7.2, -54.5, 1));	//Cube #4
-		arr_objects.push(new Cube(scene, -51.5, 7.2, -51, 1));	//Cube #5
+		a_objects.push(new ItemBoxRow(scene, [-53, 7.1, -61], f_mapScale, loader, 6, .85, 1));
 	//Adding pipes:
-		arr_objects.push(new Pipe(scene, -102, 7.22, -74.5, 2));
-		arr_objects.push(new Pipe(scene, -102, 7.22, -65, 2));
-		arr_objects.push(new Pipe(scene, -116, 7.22, -66, 2));
-		arr_objects.push(new Pipe(scene, -116, 7.22, -81, 2));
-		arr_objects.push(new Pipe(scene, -119.7, 7.22, 27, 2));
-		arr_objects.push(new Pipe(scene, -103, 7.22, 40, 2));
-		arr_objects.push(new Pipe(scene, -93, 7.22, 35.5, 2));
-		arr_objects.push(new Pipe(scene, -52, 7.22, 21, 2));
+		a_objects.push(new Pipe(scene, [-102, 7.19, -74.5], f_mapScale, 1));
+		a_objects.push(new Pipe(scene, [-102, 7.19, -65], f_mapScale, 1));
+		a_objects.push(new Pipe(scene, [-116, 7.19, -66], f_mapScale, 1));
+		a_objects.push(new Pipe(scene, [-116, 7.19, -81], f_mapScale, 1));
+		a_objects.push(new Pipe(scene, [-119.7, 7.19, 27], f_mapScale, 1));
+		a_objects.push(new Pipe(scene, [-103, 7.22, 40], f_mapScale, 1));
+		a_objects.push(new Pipe(scene, [-93, 7.22, 35.5], f_mapScale, 1));
+		a_objects.push(new Pipe(scene, [-52, 7.22, 21], f_mapScale, 1));
 		
 	//Adding solid objects to the octree:
-		for(let i = 0; i < arr_objects.length; i++){
-			if(arr_objects[i].fn_getType() == "pipe"){
-				worldOctree.fromGraphNode(arr_objects[i].fn_getCollider());
+		for(let i = 0; i < a_objects.length; i++){
+			if(a_objects[i].fn_getSolid()){
+				worldOctree.fromGraphNode(a_objects[i].fn_getCollider());
 			}
 			
 		}
 
-	//Adding line & cube:
-		//Material for the line & circle:
-		const material = new THREE.LineBasicMaterial( {color: 0x00ff00} );
-
-	//A light is required for MeshPhongMaterial to be seen:
-	/*const directionalLight = new THREE.DirectionalLight(0xffffff, 3);
-	directionalLight.position.set (1, 1, 3);
-	//directionalLight.position.z = 3;
-	scene.add(directionalLight);*/
 	
+	
+	//A light is required for MeshPhongMaterial to be seen.
 	//From a tutorial:
 	function fn_addLight( position, _intensity ) {
 
@@ -219,12 +313,13 @@
 
 //Adding player:
 	const input = new InputHandler();
-	const player1 = new Player(scene, v_mapPos.x, v_mapPos.y, v_mapPos.z, 1, worldOctree);
+	const player1 = new Player(scene, [v_mapPos.x, v_mapPos.y, v_mapPos.z], 1, a_checkpoints.length, int_numKeys, 5);
 
 //Variable initializations for game loop:
 	//camera.position.z = 5;
 	let spd = 0.000001;
 	var int_frames = 0;
+	let f_secs;
 	var int_secsElapsed = 0;
 	let timer = performance.now();
 	var b_paused = false;
@@ -257,7 +352,7 @@
 		
 		//Time initialization & printintg FPS:
 			let currentTime = performance.now();
-			if((currentTime - timer) >= 1000){
+			if(b_updateHUD && (currentTime - timer) >= 1000){
 				//Displaying FPS:
 					var fpsButton = document.getElementById("p_fps");
 					var float_fps = int_frames;
@@ -268,24 +363,43 @@
 				int_secsElapsed += 1;
 			}
 			
-			var timeButton = document.getElementById("p_time");
-			var str_secs = Math.abs((currentTime - timer) / 1000 + int_secsElapsed).toString();
-			timeButton.innerHTML = "Time = " + str_secs.slice(0, 5);
+			if(b_updateHUD){
+				var timeButton = document.getElementById("p_time");
+				
+				f_secs = Math.abs((currentTime - timer) / 1000 + int_secsElapsed);
+				timeButton.innerHTML = "TIME " + fn_formatTime(f_secs);
+				//console.log("f_secs = " + f_secs);
+			}
 			
 			
 		if(!b_paused){
-			//Object animations:
-			for(let i = 0; i < arr_objects.length; i++){
-				arr_objects[i].fn_animate();
-				//if(arr_objects[i].fn_getIsSolid()){
-					//arr_objects[i].fn_wallCheck();
-				//}
+			b_updateHUD = true;
+			
+			//Update objects:
+			for(let i = 0; i < a_objects.length; i++){
+				a_objects[i].fn_animate(int_frames);
+				
+			}
+
+			//Check for player collision with checkpoints:
+			for(let i = 0; i < a_checkpoints.length; i++){
+				if(a_checkpoints[i].fn_getDSOC() && a_checkpoints[i].fn_meshCollisionCheck(player1.fn_getHitbox())){
+					//var boundingBox = new THREE.Box3().setFromObject(player1.fn_getPlayer());
+					player1.fn_checkpointUpdate(a_checkpoints[i]);
+					if(player1.fn_isFinished()){
+						b_updateHUD = false;
+					}
+				}
 			}
 			
 			//Player input:
 			player1.fn_play(camera, input);
-				
-			coordsButton.innerHTML = ("XYZ = (" + camera.position.x.toFixed(2) + ", " + camera.position.y.toFixed(2) + ", " + camera.position.z.toFixed(2) + ")");
+			if(b_updateHUD){
+				coordsButton.innerHTML = ("XYZ = (" + camera.position.x.toFixed(2) + ", " + camera.position.y.toFixed(2) + ", " + camera.position.z.toFixed(2) + ")");
+			}
+		}
+		else{
+			b_updateHUD = false;
 		}
 		if(input.fn_press_pause()){
 			if(b_paused){
@@ -314,5 +428,16 @@
 	});
 	gameLoop.start();
 
-//NEED THIS FOR HTML FILE TO RECOGNIZE FUNCTIONS:
-//window.fn_pause= fn_pause;
+//Fime formatting function by ChatGPT:
+function fn_formatTime(decimalString) {
+    const totalSeconds = parseFloat(decimalString);
+    const minutes = Math.floor(totalSeconds / 60);
+    const seconds = Math.floor(totalSeconds % 60);
+    const milliseconds = Math.round((totalSeconds % 1) * 1000);
+
+    // Pad seconds and milliseconds
+    const paddedSeconds = seconds.toString().padStart(2, '0');
+    const paddedMilliseconds = milliseconds.toString().padStart(3, '0');
+
+    return `${minutes}:${paddedSeconds}:${paddedMilliseconds}`;
+}

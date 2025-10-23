@@ -1,16 +1,16 @@
-#info, #p_name, #p_fps, #p_time, #p_coords, #p_spd {
+#info, #p_time, #p_name, #p_fps, #p_coords, #p_spd, #p_laps, #p_check, #p_finish {
 	position: absolute;
-	width: 100%;
 	z-index: 100;
 	display:block;
 	color:red;
 	font-weight: bold;
-	font-size:32px;
+	font-size:1.4vw;
 	font-family:verdana;
 }
 
-#info {
+#info, #p_finish {
 	top: 1%;
+	width: 100%;
 	text-align: center;
 }
 
@@ -18,43 +18,75 @@
 	top: 2%;
 }
 
-#p_time {
+#p_coords {
 	top: 7%;
 }
 
-#p_coords {
+#p_name {
 	top: 12%;
 }
 
-#p_spd {
+#p_check {
 	top: 17%;
 }
 
-#p_name {
-	top: 22%;
+#p_time {
+	position: absolute;
+	font-size: 2.5vw;
+	
+	color:gold;
+	text-shadow:
+		-.18vw -.18vw 0 #d57900,
+		 .18vw -.18vw 0 #d57900,
+		-.18vw  .18vw 0 #d57900,
+		 .18vw  .18vw 0 #d57900;
+	
+	top: 0.05%;
+	left: 75.5%; 
 }
 
-#button1{
-	position: absolute; 
-	left: 0; 
-	right: 0; 
-	margin-inline: auto; 
-	width: fit-content;
-	bottom: 7%;
+#p_laps {
+	position: absolute;
+	font-size: 2.5vw;
 	
-	background-color: white;
-	padding: 1.2% 2.5%;
-	text-align: center;
+	color:gold;
+	text-shadow:
+		-.18vw -.18vw 0 #d57900,
+		 .18vw -.18vw 0 #d57900,
+		-.18vw  .18vw 0 #d57900,
+		 .18vw  .18vw 0 #d57900;
 	
-	border: solid;
-	border-width: 6px;
-	border-color: #5acbff;
+	top: 9%;
+	left: 83%; 
 	
-	font-family: Impact;
-	color: black;
-	font-size: 28px;
-	cursor: pointer;
-	border-radius: 4px;
+	
+}
+
+#p_spd {
+	position: absolute;
+	font-size: 2.5vw;
+	
+	color:gold;
+	text-shadow:
+		-.18vw -.18vw 0 #d57900,
+		 .18vw -.18vw 0 #d57900,
+		-.18vw  .18vw 0 #d57900,
+		 .18vw  .18vw 0 #d57900;
+	
+	bottom: 1%;
+	left: 84%; 
+}
+
+#p_finish{
+	top: 25%;
+	
+	font-size:6.5vw;
+	color:gold;
+	text-shadow:
+		-.4vw -.4vw 0 #d57900,
+		 .4vw -.4vw 0 #d57900,
+		-.4vw  .4vw 0 #d57900,
+		 .4vw  .4vw 0 #d57900;
 }
 
 .btn_back {
@@ -67,7 +99,6 @@
 	text-align: center;
 	text-decoration: none;
 	display: inline-block;
-	width: 8%;
 	
 	border: solid;
 	border-width: 6px;
@@ -75,9 +106,9 @@
 	
 	font-family: Impact;
 	color: black;
-	font-size: 28px;
+	font-size: 1.5vw;
 	cursor: pointer;
-	border-radius: 4px;
+	border-radius: 1vw;
 }
 
 #button1:hover, .btn_back:hover {

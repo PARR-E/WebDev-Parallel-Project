@@ -1,23 +1,24 @@
 import * as THREE from 'three';
+import Obj from "./object.js";
 
-export default class Cube{
+export default class Cube extends Obj{
 
-	constructor(_scene, _x, _y, _z, _scale){
+	constructor(_scene, a_xyz, _scale){
 		//Adds the cube to the scene:
-			this.cubeGeometry = new THREE.BoxGeometry( _scale, _scale, _scale );
-			this.cubeMaterial = new THREE.MeshPhongMaterial( { color: 0x00ffff } );
-			this.cube = new THREE.Mesh( this.cubeGeometry, this.cubeMaterial );
-			_scene.add( this.cube );
-			this.cube.position.set(_x, _y, _z);
+			super(_scene, a_xyz, _scale, false, false);
+			this.fn_addBox(_scene, [0,0,0], [1,1,1], 0x00ffff);
 	}
 	
-	fn_getType(){
-		return "cube";
-	}
-	
-	fn_animate(){
-		//Cube rotation:
-			this.cube.rotation.x += -0.002;
-			this.cube.rotation.y += 0.02;
-	}
+	//Overidden functions:
+		fn_getType(){
+			return "cube";
+		}
+		
+		fn_animate(_frames){
+			//Mesh rotation:
+			if(_frames % 3 == 0){
+				this.box.rotation.x += -0.006;
+				this.box.rotation.y += 0.06;
+			}
+		}
 }
